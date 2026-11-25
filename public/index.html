@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Mari Order</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--pri:#FF6B35;--pri2:#e55a28;--acc:#004E89;--bg:#FFF8F0;--card:#fff;--text:#222;--muted:#888;--border:#e8e0d8;--radius:14px;--shadow:0 2px 12px rgba(0,0,0,.08)}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+/* LOADER */
+#loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
+#loader .spin{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--pri);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loader p{margin-top:16px;color:var(--muted);font-size:14px}
+/* CLOSED OVERLAY */
+#closed-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:8000;flex-direction:column}
+#closed-overlay.show{display:flex}
+#closed-overlay h1{font-size:48px;color:#fff;margin-bottom:8px}
+#closed-overlay p{color:#ccc;font-size:18px}
+/* HEADER */
+header{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;padding:20px 24px 14px;text-align:center;position:sticky;top:0;z-index:100}
+header h1{font-size:28px;font-weight:800;letter-spacing:-0.5px}
+header .banner{font-size:14px;opacity:.9;margin-top:4px}
+/* CATEGORIES */
+.cat-bar{display:flex;gap:8px;padding:14px 16px;overflow-x:auto;position:sticky;top:76px;background:var(--bg);z-index:90;-webkit-overflow-scrolling:touch}
+.cat-bar::-webkit-scrollbar{display:none}
+.cat-btn{flex-shrink:0;padding:10px 20px;border-radius:24px;border:2px solid var(--border);background:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.cat-btn.active{background:var(--acc);color:#fff;border-color:var(--acc)}
+.cat-btn:active{transform:scale(.95)}
+/* MENU GRID */
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;padding:8px 16px 140px}
+.menu-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s;position:relative;display:flex;flex-direction:column}
+.menu-card:active{transform:scale(.97)}
+.card-img{width:100%;aspect-ratio:1;object-fit:cover;background:#f0ebe4;display:block}
+.card-emoji{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:56px;background:#f0ebe4}
+.card-body{padding:10px 12px 12px;flex:1;display:flex;flex-direction:column}
+.card-name{font-size:14px;font-weight:700;line-height:1.3;flex:1}
+.card-price{font-size:16px;font-weight:800;color:var(--pri);margin-top:6px}
+.card-actions{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.qty-ctrl{display:flex;align-items:center;gap:6px}
+.qty-btn{width:34px;height:34px;border-radius:50%;border:none;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.qty-btn.minus{background:#fee;color:#c00}
+.qty-btn.plus{background:var(--pri);color:#fff}
+.qty-btn:active{transform:scale(.88)}
+.qty-num{font-weight:700;min-width:20px;text-align:center;font-size:16px}
+.qty-badge{position:absolute;top:8px;right:8px;background:var(--pri);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;box-shadow:0 2px 8px rgba(255,107,53,.4);transform:scale(0);transition:transform .2s}
+.qty-badge.show{transform:scale(1)}
+/* BOTTOM CART BAR */
+#cart-bar{position:fixed;bottom:0;left:0;right:0;background:var(--acc);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;z-index:200;transform:translateY(100%);transition:transform .3s ease}
+#cart-bar.show{transform:translateY(0)}
+#cart-bar .left{display:flex;align-items:center;gap:10px}
+#cart-bar .cart-icon{font-size:24px}
+#cart-bar .cart-count{background:#fff;color:var(--acc);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+#cart-bar .cart-total{font-size:20px;font-weight:700}
+/* CART PANEL */
+#cart-panel{position:fixed;inset:0;z-index:300;display:none}
+#cart-panel.show{display:flex;flex-direction:column}
+#cart-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+#cart-content{position:absolute;bottom:0;left:0;right:0;max-height:85vh;background:#fff;border-radius:20px 20px 0 0;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .3s ease}
+#cart-panel.show #cart-content{transform:translateY(0)}
+.cart-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.cart-header h2{font-size:20px}
+.cart-clear{color:#c00;font-size:14px;cursor:pointer;background:none;border:none;font-weight:600}
+.cart-items{flex:1;overflow-y:auto;padding:12px 20px}
+.cart-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f0f0}
+.cart-item-info{flex:1}
+.cart-item-name{font-weight:600;font-size:15px}
+.cart-item-price{color:var(--muted);font-size:13px;margin-top:2px}
+.cart-item-controls{display:flex;align-items:center;gap:8px}
+.cart-item-controls .qty-btn{width:30px;height:30px;font-size:16px}
+.cart-item-total{font-weight:700;min-width:70px;text-align:right;font-size:15px}
+/* ORDER TYPE */
+.order-type{display:flex;gap:10px;padding:16px 20px}
+.type-btn{flex:1;padding:14px;border-radius:12px;border:2px solid var(--border);background:#fff;font-size:15px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s}
+.type-btn.active{border-color:var(--pri);background:#fff5f0;color:var(--pri)}
+.type-btn:active{transform:scale(.96)}
+/* SUBMIT */
+.cart-footer{padding:12px 20px 24px;border-top:1px solid var(--border)}
+.cart-footer .total-row{display:flex;justify-content:space-between;font-size:20px;font-weight:800;margin-bottom:12px}
+.submit-btn{width:100%;padding:16px;border-radius:12px;border:none;background:var(--pri);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .2s}
+.submit-btn:disabled{background:#ccc;cursor:not-allowed}
+.submit-btn:not(:disabled):active{transform:scale(.97);background:var(--pri2)}
+/* ORDER MODAL */
+#order-modal{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6)}
+#order-modal.show{display:flex}
+.modal-card{background:#fff;border-radius:24px;padding:40px 32px;text-align:center;max-width:380px;width:90%;position:relative}
+.modal-card .queue-num{font-size:72px;font-weight:900;color:var(--pri);line-height:1}
+.modal-card .queue-label{font-size:16px;color:var(--muted);margin:4px 0 16px}
+.modal-card .order-info{font-size:14px;color:var(--text);margin-bottom:16px}
+.status-badge{display:inline-block;padding:8px 20px;border-radius:20px;font-weight:700;font-size:15px;transition:all .3s}
+.status-badge.pending{background:#fff3cd;color:#856404}
+.status-badge.preparing{background:#cce5ff;color:#004085}
+.status-badge.ready{background:#d4edda;color:#155724;animation:pulse 1s ease infinite}
+.status-badge.completed{background:#e2e3e5;color:#383d41}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.confetti{position:absolute;top:0;left:50%;width:6px;height:6px;border-radius:50%;animation:confettiFall 1.5s ease forwards}
+@keyframes confettiFall{0%{transform:translateY(-20px) rotate(0);opacity:1}100%{transform:translateY(300px) rotate(720deg);opacity:0}}
+.new-order-btn{margin-top:20px;padding:14px 32px;border-radius:12px;border:2px solid var(--pri);background:#fff;color:var(--pri);font-size:16px;font-weight:700;cursor:pointer;transition:all .2s}
+.new-order-btn:active{background:var(--pri);color:#fff}
+/* TOAST */
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:#333;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:9000;transition:transform .3s;max-width:90%}
+#toast.show{transform:translateX(-50%) translateY(0)}
+/* EMPTY */
+.empty-msg{text-align:center;padding:60px 20px;color:var(--muted);font-size:16px}
+@media(min-width:600px){.menu-grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:900px){.menu-grid{grid-template-columns:repeat(4,1fr);padding:16px 32px 140px}.cat-bar{padding:14px 32px}}
+</style>
+</head>
+<body>
+<div id="loader"><div class="spin"></div><p>Memuatkan menu…</p></div>
+<div id="closed-overlay"><h1>🔒</h1><h1>Kedai Sedang Tutup</h1><p>Sila datang lagi nanti</p></div>
+<div id="toast"></div>
+
+<header>
+  <h1 id="store-name">Mari Order</h1>
+  <div class="banner" id="banner-text"></div>
+</header>
+
+<div class="cat-bar" id="cat-bar"></div>
+<div class="menu-grid" id="menu-grid"></div>
+
+<div id="cart-bar" onclick="openCart()">
+  <div class="left">
+    <span class="cart-icon">🛒</span>
+    <span class="cart-count" id="cart-count">0</span>
+    <span>item</span>
+  </div>
+  <span class="cart-total" id="cart-bar-total">RM 0.00</span>
+</div>
+
+<div id="cart-panel">
+  <div id="cart-backdrop" onclick="closeCart()"></div>
+  <div id="cart-content">
+    <div class="cart-header">
+      <h2>🛒 Troli Anda</h2>
+      <button class="cart-clear" onclick="clearCart()">Kosongkan</button>
+    </div>
+    <div class="cart-items" id="cart-items"></div>
+    <div class="order-type" id="order-type">
+      <button class="type-btn" data-type="dine-in" onclick="selectType(this)">🍽️ Makan Sini</button>
+      <button class="type-btn" data-type="takeaway" onclick="selectType(this)">🛍️ Bungkus</button>
+    </div>
+    <div class="cart-footer">
+      <div class="total-row"><span>Jumlah</span><span id="cart-total">RM 0.00</span></div>
+      <button class="submit-btn" id="submit-btn" disabled onclick="submitOrder()">Hantar Pesanan</button>
+    </div>
+  </div>
+</div>
+
+<div id="order-modal">
+  <div class="modal-card" id="modal-card">
+    <div class="queue-label">Nombor Giliran Anda</div>
+    <div class="queue-num" id="queue-num">-</div>
+    <div class="order-info" id="order-info"></div>
+    <div class="status-badge pending" id="status-badge">Menunggu</div>
+    <br>
+    <button class="new-order-btn" onclick="newOrder()">Pesanan Baru</button>
+  </div>
+</div>
+
+<script>
+let settings={}, categories=[], menuItems=[], cart=[], orderType='', pollTimer=null;
+
+const statusMap = {pending:'Menunggu',preparing:'Menyediakan',ready:'Sedia! 🎉',completed:'Selesai'};
+
+async function init(){
+  try{
+    const [s,c,m] = await Promise.all([
+      fetch('/api/settings').then(r=>r.json()),
+      fetch('/api/categories').then(r=>r.json()),
+      fetch('/api/menu').then(r=>r.json())
+    ]);
+    settings=s; categories=c; menuItems=m;
+    document.getElementById('store-name').textContent=s.store_name||'Mari Order';
+    document.getElementById('banner-text').textContent=s.banner||'';
+    document.title=s.store_name||'Mari Order';
+    if(s.store_open!=='1') document.getElementById('closed-overlay').classList.add('show');
+    renderCategories();
+    renderMenu();
+  }catch(e){toast('Gagal memuatkan data: '+e.message)}
+  finally{document.getElementById('loader').style.display='none'}
+}
+
+function renderCategories(){
+  const bar=document.getElementById('cat-bar');
+  const activeCats=categories.filter(c=>c.active===1||c.active==='1');
+  let html='<button class="cat-btn active" onclick="filterCat(null,this)">Semua</button>';
+  activeCats.forEach(c=>{
+    html+=`<button class="cat-btn" onclick="filterCat(${c.id},this)">${c.name}</button>`;
+  });
+  bar.innerHTML=html;
+}
+
+let currentCat=null;
+function filterCat(catId,btn){
+  currentCat=catId;
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMenu();
+}
+
+function renderMenu(){
+  const grid=document.getElementById('menu-grid');
+  const activeCatIds=new Set(categories.filter(c=>c.active===1||c.active==='1').map(c=>c.id));
+  let items=menuItems.filter(m=>(m.active===1||m.active==='1')&&activeCatIds.has(m.category_id));
+  if(currentCat!==null) items=items.filter(m=>m.category_id===currentCat);
+  if(items.length===0){grid.innerHTML='<div class="empty-msg">Tiada item dalam kategori ini</div>';return}
+  grid.innerHTML=items.map(m=>{
+    const inCart=cart.find(c=>c.id===m.id);
+    const qty=inCart?inCart.quantity:0;
+    const imgHtml=m.image_id
+      ?`<img class="card-img" src="/api/images/${m.image_id}" alt="${esc(m.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="card-emoji" style="display:none">${m.emoji||'🍽️'}</div>`
+      :`<div class="card-emoji">${m.emoji||'🍽️'}</div>`;
+    return `<div class="menu-card" data-id="${m.id}">
+      <div class="qty-badge ${qty>0?'show':''}">${qty}</div>
+      ${imgHtml}
+      <div class="card-body">
+        <div class="card-name">${esc(m.name)}</div>
+        <div class="card-price">RM ${m.price.toFixed(2)}</div>
+        <div class="card-actions">
+          <div class="qty-ctrl">
+            ${qty>0?`<button class="qty-btn minus" onclick="event.stopPropagation();changeQty(${m.id},-1)">−</button><span class="qty-num">${qty}</span>`:''}
+            <button class="qty-btn plus" onclick="event.stopPropagation();changeQty(${m.id},1)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function changeQty(id,delta){
+  const item=menuItems.find(m=>m.id===id);
+  if(!item)return;
+  let inCart=cart.find(c=>c.id===id);
+  if(!inCart){
+    if(delta<0)return;
+    inCart={id:item.id,name:item.name,price:item.price,emoji:item.emoji||'🍽️',quantity:0};
+    cart.push(inCart);
+  }
+  inCart.quantity+=delta;
+  if(inCart.quantity<=0) cart=cart.filter(c=>c.id!==id);
+  renderMenu();
+  updateCartBar();
+}
+
+function updateCartBar(){
+  const totalItems=cart.reduce((s,c)=>s+c.quantity,0);
+  const totalPrice=cart.reduce((s,c)=>s+c.price*c.quantity,0);
+  document.getElementById('cart-count').textContent=totalItems;
+  document.getElementById('cart-bar-total').textContent='RM '+totalPrice.toFixed(2);
+  document.getElementById('cart-bar').classList.toggle('show',totalItems>0);
+  updateSubmitBtn();
+}
+
+function openCart(){
+  if(cart.length===0)return;
+  renderCartItems();
+  document.getElementById('cart-panel').classList.add('show');
+}
+function closeCart(){document.getElementById('cart-panel').classList.remove('show')}
+
+function renderCartItems(){
+  const el=document.getElementById('cart-items');
+  if(cart.length===0){el.innerHTML='<div class="empty-msg">Troli kosong</div>';return}
+  el.innerHTML=cart.map(c=>`<div class="cart-item">
+    <div class="cart-item-info">
+      <div class="cart-item-name">${c.emoji} ${esc(c.name)}</div>
+      <div class="cart-item-price">RM ${c.price.toFixed(2)} / unit</div>
+    </div>
+    <div class="cart-item-controls">
+      <button class="qty-btn minus" onclick="changeQtyCart(${c.id},-1)">−</button>
+      <span class="qty-num">${c.quantity}</span>
+      <button class="qty-btn plus" onclick="changeQtyCart(${c.id},1)">+</button>
+    </div>
+    <div class="cart-item-total">RM ${(c.price*c.quantity).toFixed(2)}</div>
+  </div>`).join('');
+  const total=cart.reduce((s,c)=>s+c.price*c.quantity,0);
+  document.getElementById('cart-total').textContent='RM '+total.toFixed(2);
+}
+
+function changeQtyCart(id,delta){
+  changeQty(id,delta);
+  if(cart.length===0){closeCart();return}
+  renderCartItems();
+}
+
+function clearCart(){
+  cart=[];orderType='';
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
+  updateCartBar();renderMenu();closeCart();
+}
+
+function selectType(btn){
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  orderType=btn.dataset.type;
+  updateSubmitBtn();
+}
+
+function updateSubmitBtn(){
+  document.getElementById('submit-btn').disabled=cart.length===0||!orderType;
+}
+
+async function submitOrder(){
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true;btn.textContent='Menghantar…';
+  try{
+    const res=await fetch('/api/orders',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({items:cart.map(c=>({id:c.id,quantity:c.quantity})),order_type:orderType})
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Gagal hantar pesanan');
+    showOrderModal(data);
+    cart=[];orderType='';
+    document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
+    updateCartBar();renderMenu();closeCart();
+  }catch(e){toast(e.message)}
+  finally{btn.disabled=false;btn.textContent='Hantar Pesanan';updateSubmitBtn()}
+}
+
+function showOrderModal(order){
+  document.getElementById('queue-num').textContent='#'+order.queue_number;
+  const typeLabel=order.status==='pending'?(orderType==='dine-in'?'🍽️ Makan Sini':'🛍️ Bungkus'):'';
+  document.getElementById('order-info').textContent=typeLabel+'  •  Jumlah: RM '+order.total.toFixed(2);
+  updateStatusBadge('pending');
+  document.getElementById('order-modal').classList.add('show');
+  startPolling(order.order_id);
+}
+
+function updateStatusBadge(status){
+  const badge=document.getElementById('status-badge');
+  badge.className='status-badge '+status;
+  badge.textContent=statusMap[status]||status;
+  if(status==='ready') spawnConfetti();
+}
+
+function startPolling(orderId){
+  if(pollTimer)clearInterval(pollTimer);
+  pollTimer=setInterval(async()=>{
+    try{
+      const res=await fetch(`/api/orders/${orderId}/status`);
+      const data=await res.json();
+      updateStatusBadge(data.status);
+      if(data.status==='completed'||data.status==='ready'){
+        if(data.status==='completed') clearInterval(pollTimer);
+      }
+    }catch(e){}
+  },3000);
+}
+
+function spawnConfetti(){
+  const card=document.getElementById('modal-card');
+  const colors=['#FF6B35','#004E89','#FFD700','#4CAF50','#E91E63','#9C27B0'];
+  for(let i=0;i<30;i++){
+    const c=document.createElement('div');
+    c.className='confetti';
+    c.style.left=(Math.random()*80+10)+'%';
+    c.style.background=colors[Math.floor(Math.random()*colors.length)];
+    c.style.animationDelay=(Math.random()*0.8)+'s';
+    c.style.animationDuration=(1+Math.random())+'s';
+    card.appendChild(c);
+    setTimeout(()=>c.remove(),2500);
+  }
+}
+
+function newOrder(){
+  document.getElementById('order-modal').classList.remove('show');
+  if(pollTimer){clearInterval(pollTimer);pollTimer=null}
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+init();
+</script>
+</body>
+</html>
