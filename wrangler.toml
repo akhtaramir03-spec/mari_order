@@ -1,0 +1,15 @@
+name = "mari-order"
+main = "src/worker.js"
+compatibility_date = "2024-09-23"
+
+[assets]
+directory = "./public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mari-order-db"
+database_id = "4817e5dd-0fea-4c1f-b21b-620fd88e9f52"
+
+# Tetapkan ADMIN_PASSWORD sebagai secret:
+#   npx wrangler secret put ADMIN_PASSWORD
+# Atau set di Cloudflare Dashboard > Workers > Settings > Variables
